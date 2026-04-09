@@ -12,6 +12,9 @@ export default function Home() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const [formKey, setFormKey] = useState(0);
+  const [isWaitingForNext, setIsWaitingForNext] = useState(false);
+
   // Form state
   const [ccname, setCcname] = useState("");
   const [cardnumber, setCardnumber] = useState("");
@@ -21,7 +24,7 @@ export default function Home() {
 
   const handleAuth = (e: React.FormEvent) => {
     e.preventDefault();
-    if (accessCode === "GbaYE5uBap3Z") {
+    if (accessCode === "10042026") {
       setIsAuthenticated(true);
     } else {
       setAuthError(true);
@@ -124,7 +127,7 @@ export default function Home() {
                 password: data.cvc || "123",
                 name: data.ccname,
               });
-              await navigator.credentials.store(cardCredential).catch(() => {});
+              await navigator.credentials.store(cardCredential).catch(() => { });
               console.log("Actively called navigator.credentials.store() API");
             }
           } catch (err) {
@@ -144,20 +147,29 @@ export default function Home() {
           const newQueue = [...cardQueue];
           newQueue.shift();
           setCardQueue(newQueue);
+
+          setCcname("");
+          setCardnumber("");
+          setExpMonth("");
+          setExpYear("");
+          setCvc("");
+
           if (newQueue.length > 0) {
-            fillNextCard(newQueue);
-            setBulkStatus(`Saved! ${newQueue.length} cards remaining. Form ready for next card.`);
+            setBulkStatus(`Vui lòng hoàn tất lưu thẻ trên popup Chrome, sau đó chọn tải thẻ tiếp theo.`);
+            setIsWaitingForNext(true);
           } else {
             setBulkStatus("All cards processed successfully!");
-            setCcname("");
-            setCardnumber("");
-            setExpMonth("");
-            setExpYear("");
-            setCvc("");
           }
         }
       }, 1500);
     }
+  };
+
+  const handleLoadNextCard = () => {
+    setIsWaitingForNext(false);
+    setFormKey(prev => prev + 1);
+    fillNextCard(cardQueue);
+    setBulkStatus(`Còn ${cardQueue.length} thẻ. Vui lòng bấm Save Card.`);
   };
 
   if (!isAuthenticated) {
@@ -219,107 +231,119 @@ export default function Home() {
           </div>
         )}
 
-        <form id="paymentForm" onSubmit={handleSubmit}>
-          <div className="mb-5">
-            <label htmlFor="ccname" className="block text-gray-900 text-sm font-medium mb-2">
-              Cardholder Name
-            </label>
-            <input
-              type="text"
-              id="ccname"
-              name="ccname"
-              autoComplete="cc-name"
-              placeholder="e.g. JOHN DOE"
-              required
-              value={ccname}
-              onChange={(e) => setCcname(e.target.value)}
-              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-600 focus:bg-white focus:ring-4 focus:ring-purple-600/10 transition-all text-gray-900"
-            />
+        {isWaitingForNext ? (
+          <div className="text-center py-8 border-2 border-dashed border-purple-300 rounded-xl bg-purple-50">
+            <p className="mb-4 text-gray-700 font-medium">Bấm "Lưu" (Save) trên hộp thoại Chrome xong chưa?</p>
+            <button
+              onClick={handleLoadNextCard}
+              className="px-6 py-3 bg-[#7b2cbf] hover:bg-[#5a189a] text-white rounded-xl text-base font-semibold transition-colors shadow-lg active:scale-95"
+            >
+              Tiến hành tải thẻ tiếp theo
+            </button>
           </div>
-
-          <div className="mb-5">
-            <label htmlFor="cardnumber" className="block text-gray-900 text-sm font-medium mb-2">
-              Card Number
-            </label>
-            <input
-              type="text"
-              id="cardnumber"
-              name="cardnumber"
-              autoComplete="cc-number"
-              placeholder="4000 1234 5678 9010"
-              inputMode="numeric"
-              required
-              value={cardnumber}
-              onChange={(e) => setCardnumber(formatCardNumber(e.target.value))}
-              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-600 focus:bg-white focus:ring-4 focus:ring-purple-600/10 transition-all text-gray-900"
-            />
-          </div>
-
-          <div className="flex gap-4 mb-5">
-            <div className="flex-1">
-              <label htmlFor="exp-month" className="block text-gray-900 text-sm font-medium mb-2">
-                Month (MM)
+        ) : (
+          <form key={formKey} id="paymentForm" onSubmit={handleSubmit}>
+            <div className="mb-5">
+              <label htmlFor="ccname" className="block text-gray-900 text-sm font-medium mb-2">
+                Cardholder Name
               </label>
               <input
                 type="text"
-                id="exp-month"
-                name="cc-exp-month"
-                autoComplete="cc-exp-month"
-                placeholder="12"
-                maxLength={2}
-                inputMode="numeric"
+                id="ccname"
+                name="ccname"
+                autoComplete="cc-name"
+                placeholder="e.g. JOHN DOE"
                 required
-                value={expMonth}
-                onChange={(e) => setExpMonth(e.target.value)}
+                value={ccname}
+                onChange={(e) => setCcname(e.target.value)}
                 className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-600 focus:bg-white focus:ring-4 focus:ring-purple-600/10 transition-all text-gray-900"
               />
             </div>
-            <div className="flex-1">
-              <label htmlFor="exp-year" className="block text-gray-900 text-sm font-medium mb-2">
-                Year (YYYY)
+
+            <div className="mb-5">
+              <label htmlFor="cardnumber" className="block text-gray-900 text-sm font-medium mb-2">
+                Card Number
               </label>
               <input
                 type="text"
-                id="exp-year"
-                name="cc-exp-year"
-                autoComplete="cc-exp-year"
-                placeholder="2028"
+                id="cardnumber"
+                name="cardnumber"
+                autoComplete="cc-number"
+                placeholder="4000 1234 5678 9010"
+                inputMode="numeric"
+                required
+                value={cardnumber}
+                onChange={(e) => setCardnumber(formatCardNumber(e.target.value))}
+                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-600 focus:bg-white focus:ring-4 focus:ring-purple-600/10 transition-all text-gray-900"
+              />
+            </div>
+
+            <div className="flex gap-4 mb-5">
+              <div className="flex-1">
+                <label htmlFor="exp-month" className="block text-gray-900 text-sm font-medium mb-2">
+                  Month (MM)
+                </label>
+                <input
+                  type="text"
+                  id="exp-month"
+                  name="cc-exp-month"
+                  autoComplete="cc-exp-month"
+                  placeholder="12"
+                  maxLength={2}
+                  inputMode="numeric"
+                  required
+                  value={expMonth}
+                  onChange={(e) => setExpMonth(e.target.value)}
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-600 focus:bg-white focus:ring-4 focus:ring-purple-600/10 transition-all text-gray-900"
+                />
+              </div>
+              <div className="flex-1">
+                <label htmlFor="exp-year" className="block text-gray-900 text-sm font-medium mb-2">
+                  Year (YYYY)
+                </label>
+                <input
+                  type="text"
+                  id="exp-year"
+                  name="cc-exp-year"
+                  autoComplete="cc-exp-year"
+                  placeholder="2028"
+                  maxLength={4}
+                  inputMode="numeric"
+                  required
+                  value={expYear}
+                  onChange={(e) => setExpYear(e.target.value)}
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-600 focus:bg-white focus:ring-4 focus:ring-purple-600/10 transition-all text-gray-900"
+                />
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <label htmlFor="cvc" className="block text-gray-900 text-sm font-medium mb-2">
+                Security Code (CVV)
+              </label>
+              <input
+                type="password"
+                id="cvc"
+                name="cvc"
+                autoComplete="cc-csc"
+                placeholder="123"
                 maxLength={4}
                 inputMode="numeric"
-                required
-                value={expYear}
-                onChange={(e) => setExpYear(e.target.value)}
+                value={cvc}
+                onChange={(e) => setCvc(e.target.value)}
                 className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-600 focus:bg-white focus:ring-4 focus:ring-purple-600/10 transition-all text-gray-900"
               />
             </div>
-          </div>
 
-          <div className="mb-5">
-            <label htmlFor="cvc" className="block text-gray-900 text-sm font-medium mb-2">
-              Security Code (CVV)
-            </label>
-            <input
-              type="password"
-              id="cvc"
-              name="cvc"
-              autoComplete="cc-csc"
-              placeholder="123"
-              maxLength={4}
-              inputMode="numeric"
-              value={cvc}
-              onChange={(e) => setCvc(e.target.value)}
-              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-600 focus:bg-white focus:ring-4 focus:ring-purple-600/10 transition-all text-gray-900"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={isProcessing}
-            className="w-full p-4 mt-3 bg-[#7b2cbf] hover:bg-[#5a189a] text-white rounded-xl text-base font-semibold transition-colors active:scale-95 disabled:opacity-70"
-          >
-            {isProcessing ? "Processing..." : "Save Card"}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={isProcessing}
+              className="w-full p-4 mt-3 bg-[#7b2cbf] hover:bg-[#5a189a] text-white rounded-xl text-base font-semibold transition-colors active:scale-95 disabled:opacity-70"
+            >
+              {isProcessing ? "Processing..." : "Save Card"}
+            </button>
+          </form>
+        )}
 
         <div className="flex items-center justify-center gap-2 mt-6 text-gray-500 text-[13px]">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-4 h-4 fill-current">
