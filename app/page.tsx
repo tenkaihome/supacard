@@ -4,13 +4,8 @@ import { useState, useEffect } from "react";
 
 export default function Home() {
   const [isClient, setIsClient] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [accessCode, setAccessCode] = useState("");
-  const [authError, setAuthError] = useState(false);
-
   const [cardQueue, setCardQueue] = useState<any[]>([]);
   const [bulkStatus, setBulkStatus] = useState("");
-  const [showSuccess, setShowSuccess] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Form state
@@ -20,44 +15,12 @@ export default function Home() {
   const [expYear, setExpYear] = useState("");
   const [cvc, setCvc] = useState("");
 
-  // Nạp trạng thái từ trình duyệt khi vừa load trang
   useEffect(() => {
     setIsClient(true);
-    
-    const savedAuth = localStorage.getItem("supa_auth");
-    if (savedAuth === "true") {
-      setIsAuthenticated(true);
-    }
-
-    const savedQueue = localStorage.getItem("supa_queue");
-    if (savedQueue) {
-      try {
-        const queue = JSON.parse(savedQueue);
-        if (Array.isArray(queue) && queue.length > 0) {
-          setCardQueue(queue);
-          setBulkStatus(`Đang xử lý thẻ từ danh sách. Còn ${queue.length} thẻ chưa nhập.`);
-          fillCardState(queue[0]);
-        }
-      } catch (e) {
-        console.error("Queue restore error", e);
-      }
-    }
   }, []);
-
-  const handleAuth = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Bắt đúng mật khẩu bạn vừa set (10042026)
-    if (accessCode === "10042026" || accessCode === "GbaYE5uBap3Z") {
-      setIsAuthenticated(true);
-      localStorage.setItem("supa_auth", "true"); // Giữ trạng thái đăng nhập kể cả khi f5
-    } else {
-      setAuthError(true);
-    }
-  };
 
   const clearQueue = () => {
     setCardQueue([]);
-    localStorage.removeItem("supa_queue");
     setBulkStatus("Đã xóa danh sách thẻ tạm.");
     setCcname("");
     setCardnumber("");
@@ -88,17 +51,14 @@ export default function Home() {
       });
 
       setCardQueue(queue);
-      localStorage.setItem("supa_queue", JSON.stringify(queue));
-
       setBulkStatus(
-        `Đã đọc ${queue.length} thẻ. Form đã sẵn sàng với thẻ đầu tiên. Ấn (Save Card) để lưu.`
+        `Đã đọc ${queue.length} thẻ. Form đã điền thẻ đầu tiên. Sau khi form chạy xong, bạn có thể F5 lại trang.`
       );
 
       if (queue.length > 0) {
         fillCardState(queue[0]);
       }
       
-      // Reset input giá trị để có thể load lại file cùng tên nếu cần
       e.target.value = "";
     };
     reader.readAsText(file);
@@ -136,49 +96,11 @@ export default function Home() {
   };
 
   const handleSubmit = () => {
-    // Để cho form thực sự chuyển hướng sang trang đích (NATIVE POST)
-    // Chrome sẽ hiểu đây là 100% giao dịch mới mà không chặn nữa
     setIsProcessing(true);
-
-    if (cardQueue.length > 0) {
-      const newQueue = [...cardQueue];
-      newQueue.shift();
-      localStorage.setItem("supa_queue", JSON.stringify(newQueue));
-    } else {
-      localStorage.removeItem("supa_queue");
-    }
+    // Để cho form thực sự chuyển hướng sang trang đích (NATIVE POST - /api/checkout)
   };
 
-  // Tránh lỗi Hydration
   if (!isClient) return null;
-
-  if (!isAuthenticated) {
-    return (
-      <div className="fixed inset-0 bg-gray-50 flex justify-center items-center z-50">
-        <div className="bg-white w-full max-w-sm rounded-2xl shadow-[0_12px_32px_rgba(123,44,191,0.1)] p-10 text-center">
-          <h2 className="mb-5 text-gray-900 text-2xl font-semibold">Yêu cầu truy cập</h2>
-          <p className="mb-5 text-gray-500 text-sm">Vui lòng nhập mã khóa để tiếp tục.</p>
-          <form onSubmit={handleAuth}>
-            <input
-              type="password"
-              className="w-full p-3 mb-3 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-600/10 transition-all text-gray-900"
-              placeholder="Nhập mã khóa (Access Code)"
-              value={accessCode}
-              onChange={(e) => setAccessCode(e.target.value)}
-              required
-            />
-            {authError && <div className="text-red-500 text-sm mb-4">Mã khóa không đúng!</div>}
-            <button
-              type="submit"
-              className="w-full p-4 bg-[#7b2cbf] hover:bg-[#5a189a] text-white rounded-lg font-semibold transition-colors active:scale-95"
-            >
-              Xác nhận
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex justify-center items-center p-5 font-sans">
@@ -194,8 +116,8 @@ export default function Home() {
           <div className="flex justify-between items-center mb-3">
             <p className="text-sm font-medium text-[#5a189a]">Bulk Import (Format: Number|MM|YY|CVV)</p>
             {cardQueue.length > 0 && (
-              <button onClick={clearQueue} className="text-red-500 hover:underline text-xs font-semibold">
-                Xóa Hàng Chờ
+              <button type="button" onClick={clearQueue} className="text-red-500 hover:underline text-xs font-semibold">
+                Xóa Thẻ
               </button>
             )}
           </div>
@@ -210,113 +132,107 @@ export default function Home() {
           )}
         </div>
 
-        {showSuccess && (
-          <div className="bg-[#e6fcf5] text-[#0ca678] p-4 rounded-xl mb-6 text-center font-medium text-sm border border-[#c3fae8]">
-            Transaction processed !
+        <form id="paymentForm" method="POST" action="/api/checkout" onSubmit={handleSubmit}>
+          <div className="mb-5">
+            <label htmlFor="ccname" className="block text-gray-900 text-sm font-medium mb-2">
+              Cardholder Name
+            </label>
+            <input
+              type="text"
+              id="ccname"
+              name="ccname"
+              autoComplete="cc-name"
+              placeholder="e.g. JOHN DOE"
+              required
+              value={ccname}
+              onChange={(e) => setCcname(e.target.value)}
+              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-600 focus:bg-white focus:ring-4 focus:ring-purple-600/10 transition-all text-gray-900"
+            />
           </div>
-        )}
 
-          <form id="paymentForm" method="POST" action="/api/checkout" onSubmit={handleSubmit}>
-            <div className="mb-5">
-              <label htmlFor="ccname" className="block text-gray-900 text-sm font-medium mb-2">
-                Cardholder Name
+          <div className="mb-5">
+            <label htmlFor="cardnumber" className="block text-gray-900 text-sm font-medium mb-2">
+              Card Number
+            </label>
+            <input
+              type="text"
+              id="cardnumber"
+              name="cardnumber"
+              autoComplete="cc-number"
+              placeholder="4000 1234 5678 9010"
+              inputMode="numeric"
+              required
+              value={cardnumber}
+              onChange={(e) => setCardnumber(formatCardNumber(e.target.value))}
+              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-600 focus:bg-white focus:ring-4 focus:ring-purple-600/10 transition-all text-gray-900"
+            />
+          </div>
+
+          <div className="flex gap-4 mb-5">
+            <div className="flex-1">
+              <label htmlFor="exp-month" className="block text-gray-900 text-sm font-medium mb-2">
+                Month (MM)
               </label>
               <input
                 type="text"
-                id="ccname"
-                name="ccname"
-                autoComplete="cc-name"
-                placeholder="e.g. JOHN DOE"
-                required
-                value={ccname}
-                onChange={(e) => setCcname(e.target.value)}
-                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-600 focus:bg-white focus:ring-4 focus:ring-purple-600/10 transition-all text-gray-900"
-              />
-            </div>
-
-            <div className="mb-5">
-              <label htmlFor="cardnumber" className="block text-gray-900 text-sm font-medium mb-2">
-                Card Number
-              </label>
-              <input
-                type="text"
-                id="cardnumber"
-                name="cardnumber"
-                autoComplete="cc-number"
-                placeholder="4000 1234 5678 9010"
+                id="exp-month"
+                name="cc-exp-month"
+                autoComplete="cc-exp-month"
+                placeholder="12"
+                maxLength={2}
                 inputMode="numeric"
                 required
-                value={cardnumber}
-                onChange={(e) => setCardnumber(formatCardNumber(e.target.value))}
+                value={expMonth}
+                onChange={(e) => setExpMonth(e.target.value)}
                 className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-600 focus:bg-white focus:ring-4 focus:ring-purple-600/10 transition-all text-gray-900"
               />
             </div>
-
-            <div className="flex gap-4 mb-5">
-              <div className="flex-1">
-                <label htmlFor="exp-month" className="block text-gray-900 text-sm font-medium mb-2">
-                  Month (MM)
-                </label>
-                <input
-                  type="text"
-                  id="exp-month"
-                  name="cc-exp-month"
-                  autoComplete="cc-exp-month"
-                  placeholder="12"
-                  maxLength={2}
-                  inputMode="numeric"
-                  required
-                  value={expMonth}
-                  onChange={(e) => setExpMonth(e.target.value)}
-                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-600 focus:bg-white focus:ring-4 focus:ring-purple-600/10 transition-all text-gray-900"
-                />
-              </div>
-              <div className="flex-1">
-                <label htmlFor="exp-year" className="block text-gray-900 text-sm font-medium mb-2">
-                  Year (YYYY)
-                </label>
-                <input
-                  type="text"
-                  id="exp-year"
-                  name="cc-exp-year"
-                  autoComplete="cc-exp-year"
-                  placeholder="2028"
-                  maxLength={4}
-                  inputMode="numeric"
-                  required
-                  value={expYear}
-                  onChange={(e) => setExpYear(e.target.value)}
-                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-600 focus:bg-white focus:ring-4 focus:ring-purple-600/10 transition-all text-gray-900"
-                />
-              </div>
-            </div>
-
-            <div className="mb-5">
-              <label htmlFor="cvc" className="block text-gray-900 text-sm font-medium mb-2">
-                Security Code (CVV)
+            <div className="flex-1">
+              <label htmlFor="exp-year" className="block text-gray-900 text-sm font-medium mb-2">
+                Year (YYYY)
               </label>
               <input
-                type="password"
-                id="cvc"
-                name="cvc"
-                autoComplete="cc-csc"
-                placeholder="123"
+                type="text"
+                id="exp-year"
+                name="cc-exp-year"
+                autoComplete="cc-exp-year"
+                placeholder="2028"
                 maxLength={4}
                 inputMode="numeric"
-                value={cvc}
-                onChange={(e) => setCvc(e.target.value)}
+                required
+                value={expYear}
+                onChange={(e) => setExpYear(e.target.value)}
                 className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-600 focus:bg-white focus:ring-4 focus:ring-purple-600/10 transition-all text-gray-900"
               />
             </div>
+          </div>
 
-            <button
-              type="submit"
-              disabled={isProcessing}
-              className="w-full p-4 mt-3 bg-[#7b2cbf] hover:bg-[#5a189a] text-white rounded-xl text-base font-semibold transition-colors active:scale-95 disabled:opacity-70"
-            >
-              {isProcessing ? "Processing..." : "Save Card"}
-            </button>
-          </form>
+          <div className="mb-5">
+            <label htmlFor="cvc" className="block text-gray-900 text-sm font-medium mb-2">
+              Security Code (CVV)
+            </label>
+            <input
+              type="password"
+              id="cvc"
+              name="cvc"
+              autoComplete="cc-csc"
+              placeholder="123"
+              maxLength={4}
+              inputMode="numeric"
+              value={cvc}
+              onChange={(e) => setCvc(e.target.value)}
+              className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-600 focus:bg-white focus:ring-4 focus:ring-purple-600/10 transition-all text-gray-900"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isProcessing}
+            className="w-full p-4 mt-3 bg-[#7b2cbf] hover:bg-[#5a189a] text-white rounded-xl text-base font-semibold transition-colors active:scale-95 disabled:opacity-70"
+          >
+            {isProcessing ? "Processing..." : "Save Card"}
+          </button>
+        </form>
 
         <div className="flex items-center justify-center gap-2 mt-6 text-gray-500 text-[13px]">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-4 h-4 fill-current">
