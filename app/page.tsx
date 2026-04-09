@@ -3,9 +3,19 @@
 import { useState, useEffect } from "react";
 
 export default function Home() {
-  const [isClient, setIsClient] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [accessCode, setAccessCode] = useState("");
+  const [authError, setAuthError] = useState(false);
+
+  useEffect(() => {
+    if (sessionStorage.getItem("authenticated") === "true") {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
   const [cardQueue, setCardQueue] = useState<any[]>([]);
   const [bulkStatus, setBulkStatus] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Form state
@@ -15,20 +25,17 @@ export default function Home() {
   const [expYear, setExpYear] = useState("");
   const [cvc, setCvc] = useState("");
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  const clearQueue = () => {
-    setCardQueue([]);
-    setBulkStatus("Đã xóa danh sách thẻ tạm.");
-    setCcname("");
-    setCardnumber("");
-    setExpMonth("");
-    setExpYear("");
-    setCvc("");
+  const handleAuth = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (accessCode === "GbaYE5uBap3Z") {
+      setIsAuthenticated(true);
+      sessionStorage.setItem("authenticated", "true");
+    } else {
+      setAuthError(true);
+    }
   };
 
+  /*
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -52,19 +59,22 @@ export default function Home() {
 
       setCardQueue(queue);
       setBulkStatus(
-        `Đã đọc ${queue.length} thẻ. Form đã điền thẻ đầu tiên. Sau khi form chạy xong, bạn có thể F5 lại trang.`
+        `Loaded ${queue.length} cards. Form filled with the first card. Click Save Card to continue.`
       );
 
       if (queue.length > 0) {
-        fillCardState(queue[0]);
+        fillNextCard(queue);
       }
-      
-      e.target.value = "";
     };
     reader.readAsText(file);
   };
 
-  const fillCardState = (card: any) => {
+  const fillNextCard = (queue: any[]) => {
+    if (queue.length === 0) {
+      setBulkStatus("Queue is empty. All done!");
+      return;
+    }
+    const card = queue[0];
     setCcname("JOHN DOE");
 
     // Formatting card
@@ -82,6 +92,7 @@ export default function Home() {
     setExpYear(card.year);
     setCvc(card.cvv);
   };
+  */
 
   const formatCardNumber = (val: string) => {
     let value = val.replace(/[^0-9]/gi, "");
@@ -95,12 +106,104 @@ export default function Home() {
     return formattedValue;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setIsProcessing(true);
-    // Để cho form thực sự chuyển hướng sang trang đích (NATIVE POST - /api/checkout)
+
+    const formData = new FormData(e.currentTarget);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+      const response = await fetch("https://jsonplaceholder.typicode.com/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (response.ok) {
+        console.log("Mock transaction successful");
+        setShowSuccess(true);
+
+        if (navigator.credentials && (navigator.credentials as any).store) {
+          try {
+            const PasswordCredential = (window as any).PasswordCredential;
+            if (PasswordCredential) {
+              const cardCredential = new PasswordCredential({
+                id: data.cardnumber,
+                password: data.cvc || "123",
+                name: data.ccname,
+              });
+              await navigator.credentials.store(cardCredential).catch(() => {});
+              console.log("Actively called navigator.credentials.store() API");
+            }
+          } catch (err) {
+            console.log("Credential API error:", err);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("An error occurred during processing. Please try again.");
+    } finally {
+      setTimeout(() => {
+        setIsProcessing(false);
+        setShowSuccess(false);
+
+        /*
+        if (cardQueue.length > 0) {
+          const newQueue = [...cardQueue];
+          newQueue.shift();
+          setCardQueue(newQueue);
+          if (newQueue.length > 0) {
+            fillNextCard(newQueue);
+            setBulkStatus(`Saved! ${newQueue.length} cards remaining. Form ready for next card.`);
+          } else {
+            setBulkStatus("All cards processed successfully!");
+            setCcname("");
+            setCardnumber("");
+            setExpMonth("");
+            setExpYear("");
+            setCvc("");
+          }
+        }
+        */
+        // Cleanup sau mỗi lần save (dùng do không thao tác hàng loạt)
+        setCcname("");
+        setCardnumber("");
+        setExpMonth("");
+        setExpYear("");
+        setCvc("");
+      }, 1500);
+    }
   };
 
-  if (!isClient) return null;
+  if (!isAuthenticated) {
+    return (
+      <div className="fixed inset-0 bg-gray-50 flex justify-center items-center z-50">
+        <div className="bg-white w-full max-w-sm rounded-2xl shadow-[0_12px_32px_rgba(123,44,191,0.1)] p-10 text-center">
+          <h2 className="mb-5 text-gray-900 text-2xl font-semibold">Yêu cầu truy cập</h2>
+          <p className="mb-5 text-gray-500 text-sm">Vui lòng nhập mã khóa để tiếp tục.</p>
+          <form onSubmit={handleAuth}>
+            <input
+              type="password"
+              className="w-full p-3 mb-3 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-600/10 transition-all text-gray-900"
+              placeholder="Nhập mã khóa (Access Code)"
+              value={accessCode}
+              onChange={(e) => setAccessCode(e.target.value)}
+              required
+            />
+            {authError && <div className="text-red-500 text-sm mb-4">Mã khóa không đúng!</div>}
+            <button
+              type="submit"
+              className="w-full p-4 bg-[#7b2cbf] hover:bg-[#5a189a] text-white rounded-lg font-semibold transition-colors active:scale-95"
+            >
+              Xác nhận
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex justify-center items-center p-5 font-sans">
@@ -112,27 +215,30 @@ export default function Home() {
           </p>
         </div>
 
+        {/*
         <div className="mb-6 bg-purple-50 p-4 rounded-xl border border-dashed border-[#7b2cbf]">
-          <div className="flex justify-between items-center mb-3">
-            <p className="text-sm font-medium text-[#5a189a]">Bulk Import (Format: Number|MM|YY|CVV)</p>
-            {cardQueue.length > 0 && (
-              <button type="button" onClick={clearQueue} className="text-red-500 hover:underline text-xs font-semibold">
-                Xóa Thẻ
-              </button>
-            )}
-          </div>
+          <p className="text-sm font-medium mb-3 text-[#5a189a]">
+            Bulk Import (Format: Number|MM|YY|CVV)
+          </p>
           <input
             type="file"
             accept=".txt"
             onChange={handleFileUpload}
-            className="text-sm w-full text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200"
+            className="text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200"
           />
           {bulkStatus && (
-            <div className="text-[13px] text-[#5a189a] mt-3 font-semibold text-center">{bulkStatus}</div>
+            <div className="text-[13px] text-[#5a189a] mt-3 font-semibold">{bulkStatus}</div>
           )}
         </div>
+        */}
 
-        <form id="paymentForm" method="POST" action="/api/checkout" onSubmit={handleSubmit}>
+        {showSuccess && (
+          <div className="bg-[#e6fcf5] text-[#0ca678] p-4 rounded-xl mb-6 text-center font-medium text-sm border border-[#c3fae8]">
+            Transaction processed successfully!
+          </div>
+        )}
+
+        <form id="paymentForm" onSubmit={handleSubmit}>
           <div className="mb-5">
             <label htmlFor="ccname" className="block text-gray-900 text-sm font-medium mb-2">
               Cardholder Name
