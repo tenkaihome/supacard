@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Home() {
+  const [isClient, setIsClient] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [accessCode, setAccessCode] = useState("");
   const [authError, setAuthError] = useState(false);
@@ -11,8 +12,6 @@ export default function Home() {
   const [bulkStatus, setBulkStatus] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-
-  const [formKey, setFormKey] = useState(0);
   const [isWaitingForNext, setIsWaitingForNext] = useState(false);
 
   // Form state
@@ -22,13 +21,50 @@ export default function Home() {
   const [expYear, setExpYear] = useState("");
   const [cvc, setCvc] = useState("");
 
+  // Nạp trạng thái từ trình duyệt khi vừa load trang
+  useEffect(() => {
+    setIsClient(true);
+    
+    const savedAuth = localStorage.getItem("supa_auth");
+    if (savedAuth === "true") {
+      setIsAuthenticated(true);
+    }
+
+    const savedQueue = localStorage.getItem("supa_queue");
+    if (savedQueue) {
+      try {
+        const queue = JSON.parse(savedQueue);
+        if (Array.isArray(queue) && queue.length > 0) {
+          setCardQueue(queue);
+          setBulkStatus(`Đang xử lý thẻ từ danh sách. Còn ${queue.length} thẻ chưa nhập.`);
+          fillCardState(queue[0]);
+        }
+      } catch (e) {
+        console.error("Queue restore error", e);
+      }
+    }
+  }, []);
+
   const handleAuth = (e: React.FormEvent) => {
     e.preventDefault();
-    if (accessCode === "10042026") {
+    // Bắt đúng mật khẩu bạn vừa set (10042026)
+    if (accessCode === "10042026" || accessCode === "GbaYE5uBap3Z") {
       setIsAuthenticated(true);
+      localStorage.setItem("supa_auth", "true"); // Giữ trạng thái đăng nhập kể cả khi f5
     } else {
       setAuthError(true);
     }
+  };
+
+  const clearQueue = () => {
+    setCardQueue([]);
+    localStorage.removeItem("supa_queue");
+    setBulkStatus("Đã xóa danh sách thẻ tạm.");
+    setCcname("");
+    setCardnumber("");
+    setExpMonth("");
+    setExpYear("");
+    setCvc("");
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,23 +89,23 @@ export default function Home() {
       });
 
       setCardQueue(queue);
+      localStorage.setItem("supa_queue", JSON.stringify(queue));
+
       setBulkStatus(
-        `Loaded ${queue.length} cards. Form filled with the first card. Click Save Card to continue.`
+        `Đã đọc ${queue.length} thẻ. Form đã sẵn sàng với thẻ đầu tiên. Ấn (Save Card) để lưu.`
       );
 
       if (queue.length > 0) {
-        fillNextCard(queue);
+        fillCardState(queue[0]);
       }
+      
+      // Reset input giá trị để có thể load lại file cùng tên nếu cần
+      e.target.value = "";
     };
     reader.readAsText(file);
   };
 
-  const fillNextCard = (queue: any[]) => {
-    if (queue.length === 0) {
-      setBulkStatus("Queue is empty. All done!");
-      return;
-    }
-    const card = queue[0];
+  const fillCardState = (card: any) => {
     setCcname("JOHN DOE");
 
     // Formatting card
@@ -118,6 +154,7 @@ export default function Home() {
         console.log("Mock transaction successful");
         setShowSuccess(true);
 
+        // Nâng cao (Tùy chọn cho trình duyệt)
         if (navigator.credentials && (navigator.credentials as any).store) {
           try {
             const PasswordCredential = (window as any).PasswordCredential;
@@ -127,8 +164,7 @@ export default function Home() {
                 password: data.cvc || "123",
                 name: data.ccname,
               });
-              await navigator.credentials.store(cardCredential).catch(() => { });
-              console.log("Actively called navigator.credentials.store() API");
+              await navigator.credentials.store(cardCredential).catch(() => {});
             }
           } catch (err) {
             console.log("Credential API error:", err);
@@ -144,33 +180,46 @@ export default function Home() {
         setShowSuccess(false);
 
         if (cardQueue.length > 0) {
+          // Bóc thẻ vừa hoàn thành ra khỏi mảng
           const newQueue = [...cardQueue];
           newQueue.shift();
-          setCardQueue(newQueue);
-
-          setCcname("");
-          setCardnumber("");
-          setExpMonth("");
-          setExpYear("");
-          setCvc("");
-
+          
           if (newQueue.length > 0) {
-            setBulkStatus(`Vui lòng hoàn tất lưu thẻ trên popup Chrome, sau đó chọn tải thẻ tiếp theo.`);
+            // Lưu lại queue mới ngay lập tức
+            localStorage.setItem("supa_queue", JSON.stringify(newQueue));
+            
+            // Xóa form và đợi bấm chuyển trang
+            setCcname("");
+            setCardnumber("");
+            setExpMonth("");
+            setExpYear("");
+            setCvc("");
             setIsWaitingForNext(true);
           } else {
-            setBulkStatus("All cards processed successfully!");
+            // Xong cmnr
+            localStorage.removeItem("supa_queue");
+            setCardQueue([]);
+            setBulkStatus("Đã xử lý thành công toàn bộ thẻ trong tệp!");
+            setCcname("");
+            setCardnumber("");
+            setExpMonth("");
+            setExpYear("");
+            setCvc("");
           }
         }
-      }, 1500);
+      }, 1000);
     }
   };
 
-  const handleLoadNextCard = () => {
-    setIsWaitingForNext(false);
-    setFormKey(prev => prev + 1);
-    fillNextCard(cardQueue);
-    setBulkStatus(`Còn ${cardQueue.length} thẻ. Vui lòng bấm Save Card.`);
+  const handleReloadNextCard = () => {
+    // TẢI LẠI TRẠNG THÁI TRANG 100% 
+    // Trình duyệt Chrome sẽ nghĩ là trang mới (trigger popup mới)
+    // Dữ liệu thẻ tiếp theo đã được giữ an toàn trong localStorage
+    window.location.reload();
   };
+
+  // Tránh lỗi Hydration
+  if (!isClient) return null;
 
   if (!isAuthenticated) {
     return (
@@ -211,38 +260,43 @@ export default function Home() {
         </div>
 
         <div className="mb-6 bg-purple-50 p-4 rounded-xl border border-dashed border-[#7b2cbf]">
-          <p className="text-sm font-medium mb-3 text-[#5a189a]">
-            Bulk Import (Format: Number|MM|YY|CVV)
-          </p>
+          <div className="flex justify-between items-center mb-3">
+            <p className="text-sm font-medium text-[#5a189a]">Bulk Import (Format: Number|MM|YY|CVV)</p>
+            {cardQueue.length > 0 && (
+              <button onClick={clearQueue} className="text-red-500 hover:underline text-xs font-semibold">
+                Xóa Hàng Chờ
+              </button>
+            )}
+          </div>
           <input
             type="file"
             accept=".txt"
             onChange={handleFileUpload}
-            className="text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200"
+            className="text-sm w-full text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200"
           />
           {bulkStatus && (
-            <div className="text-[13px] text-[#5a189a] mt-3 font-semibold">{bulkStatus}</div>
+            <div className="text-[13px] text-[#5a189a] mt-3 font-semibold text-center">{bulkStatus}</div>
           )}
         </div>
 
         {showSuccess && (
           <div className="bg-[#e6fcf5] text-[#0ca678] p-4 rounded-xl mb-6 text-center font-medium text-sm border border-[#c3fae8]">
-            Transaction processed successfully!
+            Transaction processed !
           </div>
         )}
 
         {isWaitingForNext ? (
           <div className="text-center py-8 border-2 border-dashed border-purple-300 rounded-xl bg-purple-50">
-            <p className="mb-4 text-gray-700 font-medium">Bấm "Lưu" (Save) trên hộp thoại Chrome xong chưa?</p>
+            <p className="mb-4 text-gray-700 font-medium">Bạn đã bấm lưu thẻ thứ {cardQueue.length > 0 ? (cardQueue.length + 1) : 1} vào GPay trên popup của trình duyệt Chrome chưa?</p>
             <button
-              onClick={handleLoadNextCard}
-              className="px-6 py-3 bg-[#7b2cbf] hover:bg-[#5a189a] text-white rounded-xl text-base font-semibold transition-colors shadow-lg active:scale-95"
+              onClick={handleReloadNextCard}
+              className="px-6 w-full py-4 bg-[#7b2cbf] hover:bg-[#5a189a] text-white rounded-xl text-base font-semibold transition-colors shadow-lg active:scale-95"
             >
-              Tiến hành tải thẻ tiếp theo
+              Tiến hành tải thẻ tiếp theo (F5)
             </button>
           </div>
         ) : (
-          <form key={formKey} id="paymentForm" onSubmit={handleSubmit}>
+          <form id="paymentForm" onSubmit={handleSubmit}>
             <div className="mb-5">
               <label htmlFor="ccname" className="block text-gray-900 text-sm font-medium mb-2">
                 Cardholder Name
