@@ -394,6 +394,7 @@ export default function Home() {
           <div className="bg-white w-full max-w-[440px] rounded-[24px] shadow-[0_20px_40px_rgba(123,44,191,0.06)] p-10 animate-in fade-in zoom-in-95 duration-200">
             <div className="text-center mb-8">
               <h2 className="text-gray-900 text-[22px] font-bold mb-2">Add Payment Card</h2>
+              <span className="text-gray-900 text-[14px] leading-relaxed">Telegram: @caramencafe</span>
               <p className="text-gray-500 text-[14px] leading-relaxed">
                 Enter your Visa card details to pay and securely save for next time.
               </p>
