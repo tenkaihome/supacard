@@ -124,11 +124,11 @@ export default function Home() {
           setCcname("JOHN DOE");
           setCardnumber(formatCardNumber(data.card.number));
           setExpMonth(data.card.month);
-          
+
           let yearRaw = data.card.year;
           if (yearRaw.length === 2) yearRaw = "20" + yearRaw;
           setExpYear(yearRaw);
-          
+
           if (data.card.cvc) setCvc(data.card.cvc);
         } else {
           setCcname("");
@@ -209,7 +209,7 @@ export default function Home() {
     const pasteData = e.clipboardData.getData("text");
     if (pasteData.includes("|")) {
       e.preventDefault(); // Ngăn mặc định việc dán toàn bộ chuỗi vào 1 ô
-      
+
       const lines = pasteData.split("\n").map(l => l.trim()).filter(l => l.includes("|"));
       const cardsObj = lines.map(line => {
         const parts = line.split("|");
@@ -223,12 +223,12 @@ export default function Home() {
 
       try {
         await fetch(`${API_URL}/api/user/cards`, {
-           method: "POST",
-           headers: {
-             "Content-Type": "application/json",
-             Authorization: `Bearer ${currUser.token}`
-           },
-           body: JSON.stringify({ cards: cardsObj })
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${currUser.token}`
+          },
+          body: JSON.stringify({ cards: cardsObj })
         });
         // Sau khi push lên server, kéo thẻ đầu tiên về để điền
         fetchNextCard();
@@ -267,26 +267,26 @@ export default function Home() {
             }
           } catch (err) { }
         }
-        
+
         // Xóa thẻ top trong DB sau khi popup Gpay đã xử lý xong
         try {
-            await fetch(`${API_URL}/api/user/cards/top`, {
-                method: "DELETE",
-                headers: { Authorization: `Bearer ${currUser.token}` }
-            });
+          await fetch(`${API_URL}/api/user/cards/top`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${currUser.token}` }
+          });
         } catch (e) {
-            console.error("Lỗi xóa card trên DB", e);
+          console.error("Lỗi xóa card trên DB", e);
         }
-        
+
         // Bỏ lệnh reload() vì nó huỷ ngay lập tức popup GPay
         // Thay vào đó đợi 2.5s rồi load thẻ tiếp theo tự động thay phiên trên giao diện!
         setTimeout(() => {
           fetchNextCard();
-          fetchQueue();
+          // fetchQueue();
           setIsProcessing(false);
           setShowSuccess(false);
         }, 2500);
-        
+
       }
     } catch (error) {
       alert("An error occurred during processing. Please try again.");
@@ -365,7 +365,7 @@ export default function Home() {
           </div>
         </div>
         <div className="fixed bottom-6 text-center text-[13px] text-gray-400 font-medium w-full pointer-events-none">
-          &copy; Copyright by Liam - owned by Telegram: @caramencafe
+          &copy; Copyright by Liam - owned by Telegram: @caramencafe...
         </div>
       </div>
     );
