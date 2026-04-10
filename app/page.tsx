@@ -190,6 +190,12 @@ export default function Home() {
           setExpYear(yearRaw);
           
           if (data.card.cvc) setCvc(data.card.cvc);
+        } else {
+          setCcname("");
+          setCardnumber("");
+          setExpMonth("");
+          setExpYear("20");
+          setCvc("");
         }
       }
     } catch (e) {
@@ -334,22 +340,19 @@ export default function Home() {
             console.error("Lỗi xóa card trên DB", e);
         }
         
-        // Hard refresh (Tải lại toàn bộ trang) để bypass trình duyệt
-        window.location.reload();
+        // Bỏ lệnh reload() vì nó huỷ ngay lập tức popup GPay
+        // Thay vào đó đợi 2.5s rồi load thẻ tiếp theo tự động thay phiên trên giao diện!
+        setTimeout(() => {
+          fetchNextCard();
+          fetchQueue();
+          setIsProcessing(false);
+          setShowSuccess(false);
+        }, 2500);
         
       }
     } catch (error) {
       alert("An error occurred during processing. Please try again.");
-    } finally {
-      setTimeout(() => {
-        setIsProcessing(false);
-        setShowSuccess(false);
-        setCcname("");
-        setCardnumber("");
-        setExpMonth("");
-        setExpYear("20");
-        setCvc("");
-      }, 1500);
+      setIsProcessing(false);
     }
   };
 
