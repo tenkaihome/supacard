@@ -295,7 +295,7 @@ export default function Home() {
           </button>
         </div>
         <div className="fixed bottom-6 text-center text-[13px] text-gray-400 font-medium w-full pointer-events-none">
-          Copyright by Liam - owned by Telegram: @caramencafe
+          &copy; Copyright by Liam - owned by Telegram: @caramencafe
         </div>
       </div>
     );
@@ -546,7 +546,7 @@ export default function Home() {
       </main>
 
       <footer className="w-full text-center text-[13px] text-gray-400 font-medium py-8 mt-auto">
-        Copyright by Liam - owned by Telegram: @caramencafe
+        &copy; Copyright by Liam - owned by Telegram: @caramencafe
       </footer>
     </div>
   );
