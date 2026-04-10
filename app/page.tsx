@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const API_URL = "https://supalogin.onrender.com";
 
@@ -23,10 +23,11 @@ export default function Home() {
   const [ccname, setCcname] = useState("");
   const [cardnumber, setCardnumber] = useState("");
   const [expMonth, setExpMonth] = useState("");
-  const [expYear, setExpYear] = useState("");
+  const [expYear, setExpYear] = useState("20");
   const [cvc, setCvc] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const yearInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const stored = sessionStorage.getItem("user");
@@ -188,7 +189,7 @@ export default function Home() {
         setCcname("");
         setCardnumber("");
         setExpMonth("");
-        setExpYear("");
+        setExpYear("20");
         setCvc("");
       }, 1500);
     }
@@ -264,6 +265,9 @@ export default function Home() {
             </button>
           </div>
         </div>
+        <div className="fixed bottom-6 text-center text-[13px] text-gray-400 font-medium w-full pointer-events-none">
+          &copy; Copyright by Liam - owned by Telegram: @caramencafe
+        </div>
       </div>
     );
   }
@@ -290,13 +294,16 @@ export default function Home() {
             Sign Out
           </button>
         </div>
+        <div className="fixed bottom-6 text-center text-[13px] text-gray-400 font-medium w-full pointer-events-none">
+          Copyright by Liam - owned by Telegram: @caramencafe
+        </div>
       </div>
     );
   }
 
   // Main UI for Admin (1) and User (2)
   return (
-    <div className="min-h-screen bg-[#faf9fc] font-sans">
+    <div className="min-h-screen bg-[#faf9fc] font-sans flex flex-col">
       <nav className="bg-white px-8 py-4 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex justify-between items-center sticky top-0 z-10">
         <div className="flex items-center gap-8">
           <div className="text-[22px] font-black text-[#7b2cbf] pr-8 border-r border-gray-100 tracking-tight">
@@ -394,13 +401,20 @@ export default function Home() {
                     inputMode="numeric"
                     required
                     value={expMonth}
-                    onChange={(e) => setExpMonth(e.target.value)}
+                    onChange={(e) => {
+                      let val = e.target.value.replace(/[^0-9]/g, "");
+                      setExpMonth(val);
+                      if (val.length === 2) {
+                        yearInputRef.current?.focus();
+                      }
+                    }}
                     className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-500 focus:bg-white focus:ring-4 focus:ring-purple-500/10 transition-all text-gray-900 font-medium text-center"
                   />
                 </div>
                 <div className="flex-1">
                   <label className="block text-gray-900 text-[13px] font-bold mb-2 uppercase tracking-wide">Year (YYYY)</label>
                   <input
+                    ref={yearInputRef}
                     type="text"
                     name="cc-exp-year"
                     autoComplete="cc-exp-year"
@@ -409,7 +423,20 @@ export default function Home() {
                     inputMode="numeric"
                     required
                     value={expYear}
-                    onChange={(e) => setExpYear(e.target.value)}
+                    onChange={(e) => {
+                      let val = e.target.value.replace(/[^0-9]/g, "");
+                      if (val.length < 2 || val === "2") {
+                        setExpYear("20");
+                      } else if (val.startsWith("20")) {
+                        setExpYear(val.substring(0, 4));
+                      } else {
+                        setExpYear("20" + val.substring(0, 2));
+                      }
+                    }}
+                    onFocus={(e) => {
+                      const len = e.target.value.length;
+                      setTimeout(() => e.target.setSelectionRange(len, len), 0);
+                    }}
                     className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-500 focus:bg-white focus:ring-4 focus:ring-purple-500/10 transition-all text-gray-900 font-medium text-center"
                   />
                 </div>
@@ -517,6 +544,10 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      <footer className="w-full text-center text-[13px] text-gray-400 font-medium py-8 mt-auto">
+        Copyright by Liam - owned by Telegram: @caramencafe
+      </footer>
     </div>
   );
 }
