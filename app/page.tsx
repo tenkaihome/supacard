@@ -140,6 +140,28 @@ export default function Home() {
     }
   };
 
+  const handleDeleteUser = async (targetUsername: string) => {
+    if (!window.confirm(`Are you sure you want to delete user "${targetUsername}"? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`${API_URL}/api/admin/users/${targetUsername}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${currUser.token}`,
+        },
+      });
+      if (res.ok) {
+        fetchUsers();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to delete user");
+      }
+    } catch (error) {
+      alert("Network error");
+    }
+  };
+
   const formatCardNumber = (val: string) => {
     let value = val.replace(/[^0-9]/gi, "");
     let formattedValue = "";
@@ -525,16 +547,29 @@ export default function Home() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <select
-                          className="bg-white border border-gray-200 text-gray-900 font-semibold text-sm rounded-xl focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 block p-2.5 outline-none min-w-[140px] cursor-pointer"
-                          value={u.role}
-                          disabled={u.username === currUser.username}
-                          onChange={(e) => handleGrantRole(u.username, Number(e.target.value))}
-                        >
-                          <option value={1}>Set Admin (1)</option>
-                          <option value={2}>Set User (2)</option>
-                          <option value={3}>Set Guest (3)</option>
-                        </select>
+                        <div className="flex items-center gap-2">
+                          <select
+                            className="bg-white border border-gray-200 text-gray-900 font-semibold text-sm rounded-xl focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 block p-2.5 outline-none min-w-[140px] cursor-pointer"
+                            value={u.role}
+                            disabled={u.username === currUser.username}
+                            onChange={(e) => handleGrantRole(u.username, Number(e.target.value))}
+                          >
+                            <option value={1}>Set Admin (1)</option>
+                            <option value={2}>Set User (2)</option>
+                            <option value={3}>Set Guest (3)</option>
+                          </select>
+                          {u.username !== currUser.username && (
+                            <button
+                              onClick={() => handleDeleteUser(u.username)}
+                              className="p-2 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 rounded-lg transition-colors shrink-0"
+                              title="Delete User"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
