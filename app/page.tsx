@@ -333,14 +333,11 @@ export default function Home() {
           console.error("Lỗi xóa card trên DB", e);
         }
 
-        // Bỏ lệnh reload() vì nó huỷ ngay lập tức popup GPay
-        // Thay vào đó đợi 2.5s rồi load thẻ tiếp theo tự động thay phiên trên giao diện!
+        // Chrome bắt buộc phải có Refresh trang (F5) thực tế để reset lại bộ đếm cản spam GPay
+        // Đặt timeout 2 giây để bạn kịp nhìn thấy/tương tác với popup GPay trước khi trang Refresh!
         setTimeout(() => {
-          fetchNextCard();
-          // fetchQueue();
-          setIsProcessing(false);
-          setShowSuccess(false);
-        }, 2500);
+          window.location.reload();
+        }, 2000);
 
       }
     } catch (error) {
