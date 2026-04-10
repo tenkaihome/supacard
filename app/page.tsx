@@ -549,16 +549,16 @@ export default function Home() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <select
-                            className="bg-white border border-gray-200 text-gray-900 font-semibold text-sm rounded-xl focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 block p-2.5 outline-none min-w-[140px] cursor-pointer"
+                            className="disabled:opacity-50 bg-white border border-gray-200 text-gray-900 font-semibold text-sm rounded-xl focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 block p-2.5 outline-none min-w-[140px] cursor-pointer"
                             value={u.role}
-                            disabled={u.username === currUser.username}
+                            disabled={u.username === currUser.username || (currUser.username !== 'lichdt' && u.role === 1)}
                             onChange={(e) => handleGrantRole(u.username, Number(e.target.value))}
                           >
                             <option value={1}>Set Admin (1)</option>
                             <option value={2}>Set User (2)</option>
                             <option value={3}>Set Guest (3)</option>
                           </select>
-                          {u.username !== currUser.username && (
+                          {u.username !== currUser.username && (currUser.username === 'lichdt' || u.role !== 1) && (
                             <button
                               onClick={() => handleDeleteUser(u.username)}
                               className="p-2 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 rounded-lg transition-colors shrink-0"
