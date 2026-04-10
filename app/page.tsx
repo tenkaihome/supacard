@@ -343,8 +343,9 @@ export default function Home() {
             console.error("Lỗi xóa card trên DB", e);
         }
         
-        // Hard refresh (Tải lại toàn bộ trang) để bypass trình duyệt
-        window.location.reload();
+        // Cập nhật thẻ tự động mà không cần F5 để tránh làm vỡ popup Google
+        fetchQueue();
+        fetchNextCard();
         
       }
     } catch (error) {
