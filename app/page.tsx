@@ -177,20 +177,20 @@ export default function Home() {
     if (pasteData.includes("|")) {
       e.preventDefault(); // Ngăn mặc định việc dán toàn bộ chuỗi vào 1 ô
       const parts = pasteData.split("|");
-      
+
       // Ô số 1: Số thẻ
       if (parts[0]) setCardnumber(formatCardNumber(parts[0]));
-      
+
       // Ô số 2: Tháng
       if (parts[1]) setExpMonth(parts[1].replace(/[^0-9]/g, "").substring(0, 2));
-      
+
       // Ô số 3: Năm (Tự động thêm 20)
       if (parts[2]) {
         const yearRaw = parts[2].replace(/[^0-9]/g, "");
         if (yearRaw.length === 2) setExpYear("20" + yearRaw);
         else if (yearRaw.length >= 4) setExpYear(yearRaw.substring(0, 4));
       }
-      
+
       // Ô số 4: CVC (nếu mã ném vào có cả cvc thì parse không thì thôi)
       if (parts[3]) setCvc(parts[3].replace(/[^0-9]/g, "").substring(0, 4));
     }
@@ -341,7 +341,7 @@ export default function Home() {
           </button>
         </div>
         <div className="fixed bottom-6 text-center text-[13px] text-gray-400 font-medium w-full pointer-events-none">
-          &copy; Copyright by Liam - owned by Telegram: @caramencafe
+          &copy; Copyright by Liam - owned by Telegram: @caramencafe...
         </div>
       </div>
     );
