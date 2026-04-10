@@ -18,8 +18,6 @@ export default function Home() {
   // Main App State
   const [activeTab, setActiveTab] = useState<"card" | "users">("card");
   const [usersList, setUsersList] = useState<any[]>([]);
-  const [cardQueue, setCardQueue] = useState<any[]>([]);
-  const [queueText, setQueueText] = useState("");
 
   // Card Form State
   const [ccname, setCcname] = useState("");
@@ -115,64 +113,6 @@ export default function Home() {
     }
   };
 
-  const fetchQueue = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/user/cards`, {
-        headers: { Authorization: `Bearer ${currUser.token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setCardQueue(data.cards);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const deleteQueueCard = async (index: number) => {
-    try {
-      await fetch(`${API_URL}/api/user/cards/index/${index}`, {
-         method: "DELETE",
-         headers: { Authorization: `Bearer ${currUser.token}` }
-      });
-      fetchQueue();
-      if (index === 0) fetchNextCard();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const handleBulkSubmit = async () => {
-    if (!queueText.trim()) return;
-    const lines = queueText.split("\n").map(l => l.trim()).filter(l => l.includes("|"));
-    if (lines.length === 0) return;
-    const cardsObj = lines.map(line => {
-      const parts = line.split("|");
-      return {
-        number: parts[0] ? parts[0].replace(/[^0-9]/g, "") : "",
-        month: parts[1] ? parts[1].replace(/[^0-9]/g, "").substring(0, 2) : "",
-        year: parts[2] ? parts[2].replace(/[^0-9]/g, "") : "",
-        cvc: parts[3] ? parts[3].replace(/[^0-9]/g, "").substring(0, 4) : ""
-      };
-    });
-
-    try {
-      await fetch(`${API_URL}/api/user/cards`, {
-         method: "POST",
-         headers: {
-           "Content-Type": "application/json",
-           Authorization: `Bearer ${currUser.token}`
-         },
-         body: JSON.stringify({ cards: cardsObj })
-      });
-      setQueueText("");
-      fetchQueue();
-      fetchNextCard();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   const fetchNextCard = async () => {
     try {
       const res = await fetch(`${API_URL}/api/user/cards/next`, {
@@ -209,7 +149,6 @@ export default function Home() {
     }
     if (currUser && activeTab === "card") {
       fetchNextCard();
-      fetchQueue();
     }
   }, [currUser, activeTab]);
 
@@ -293,7 +232,6 @@ export default function Home() {
         });
         // Sau khi push lên server, kéo thẻ đầu tiên về để điền
         fetchNextCard();
-        fetchQueue();
       } catch (err) {
         console.error(err);
       }
@@ -504,9 +442,9 @@ export default function Home() {
         </div>
       </nav>
 
-      <main className="p-8 pb-20 max-w-7xl mx-auto flex flex-col lg:flex-row justify-center gap-8 mt-6 items-start">
+      <main className="p-8 pb-20 max-w-5xl mx-auto flex justify-center mt-6">
         {activeTab === "card" && (
-          <div className="bg-white w-full max-w-[440px] rounded-[24px] shadow-[0_20px_40px_rgba(123,44,191,0.06)] p-10 animate-in fade-in zoom-in-95 duration-200 shrink-0">
+          <div className="bg-white w-full max-w-[440px] rounded-[24px] shadow-[0_20px_40px_rgba(123,44,191,0.06)] p-10 animate-in fade-in zoom-in-95 duration-200">
             <div className="text-center mb-8">
               <h2 className="text-gray-900 text-[22px] font-bold mb-2">Add Payment Card</h2>
               <span className="text-gray-900 text-[14px] leading-relaxed">Telegram: @caramencafe</span>
@@ -634,52 +572,6 @@ export default function Home() {
                 <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
               </svg>
               Protected by 256-bit AES Encryption
-            </div>
-          </div>
-        )}
-
-        {activeTab === "card" && (
-          <div className="bg-white w-full max-w-[380px] rounded-[24px] shadow-[0_20px_40px_rgba(123,44,191,0.06)] p-8 animate-in fade-in zoom-in-95 duration-200 shrink-0 flex flex-col">
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="text-gray-900 text-[18px] font-bold">Card Queue</h2>
-              <span className="bg-purple-100 text-[#7b2cbf] font-extrabold text-[12px] px-2.5 py-1 rounded-lg">{cardQueue.length} items</span>
-            </div>
-            
-            <textarea
-              className="w-full text-[13px] p-3.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-500 focus:bg-white focus:ring-4 focus:ring-purple-500/10 transition-all text-gray-900 mb-3 resize-none leading-relaxed"
-              rows={4}
-              placeholder={`Paste list here...\n5295800036999569|03|29|123\n...`}
-              value={queueText}
-              onChange={(e) => setQueueText(e.target.value)}
-            />
-            <button
-               type="button"
-               onClick={handleBulkSubmit}
-               disabled={!queueText.trim()}
-               className="w-full p-3.5 bg-purple-100 text-[#7b2cbf] hover:bg-purple-200 rounded-xl font-bold text-[14px] transition-all disabled:opacity-50 mb-2 shadow-sm"
-            >
-               Add to Queue
-            </button>
-
-            <div className="flex-1 flex flex-col gap-2 max-h-[380px] overflow-y-auto pr-1 mt-4">
-              {cardQueue.map((c, i) => (
-                <div key={i} className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${i === 0 ? 'border-[#7b2cbf] bg-[#faf9fc] shadow-sm' : 'border-gray-100 bg-gray-50'}`}>
-                  <div className="flex flex-col">
-                    <span className={`font-bold text-[14px] tracking-wide ${i === 0 ? 'text-[#7b2cbf]' : 'text-gray-700'}`}>
-                       {c.number}
-                    </span>
-                    {i === 0 && <span className="text-[10px] font-bold text-[#7b2cbf] uppercase mt-0.5 tracking-wider">Processing Next</span>}
-                  </div>
-                  <button onClick={() => deleteQueueCard(i)} className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 hover:text-red-500 hover:border-red-200 transition-all shadow-sm shrink-0">
-                     <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                     </svg>
-                  </button>
-                </div>
-              ))}
-              {cardQueue.length === 0 && (
-                <div className="text-center text-gray-400 text-[13px] font-medium py-8 border-2 border-dashed border-gray-200 rounded-xl">Queue is empty</div>
-              )}
             </div>
           </div>
         )}
