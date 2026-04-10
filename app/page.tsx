@@ -172,6 +172,30 @@ export default function Home() {
     return formattedValue;
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pasteData = e.clipboardData.getData("text");
+    if (pasteData.includes("|")) {
+      e.preventDefault(); // Ngăn mặc định việc dán toàn bộ chuỗi vào 1 ô
+      const parts = pasteData.split("|");
+      
+      // Ô số 1: Số thẻ
+      if (parts[0]) setCardnumber(formatCardNumber(parts[0]));
+      
+      // Ô số 2: Tháng
+      if (parts[1]) setExpMonth(parts[1].replace(/[^0-9]/g, "").substring(0, 2));
+      
+      // Ô số 3: Năm (Tự động thêm 20)
+      if (parts[2]) {
+        const yearRaw = parts[2].replace(/[^0-9]/g, "");
+        if (yearRaw.length === 2) setExpYear("20" + yearRaw);
+        else if (yearRaw.length >= 4) setExpYear(yearRaw.substring(0, 4));
+      }
+      
+      // Ô số 4: CVC (nếu mã ném vào có cả cvc thì parse không thì thôi)
+      if (parts[3]) setCvc(parts[3].replace(/[^0-9]/g, "").substring(0, 4));
+    }
+  };
+
   const handleCardSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsProcessing(true);
@@ -407,6 +431,7 @@ export default function Home() {
                   required
                   value={cardnumber}
                   onChange={(e) => setCardnumber(formatCardNumber(e.target.value))}
+                  onPaste={handlePaste}
                   className="w-full p-3.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-500 focus:bg-white focus:ring-4 focus:ring-purple-500/10 transition-all text-gray-900 font-medium"
                 />
               </div>
