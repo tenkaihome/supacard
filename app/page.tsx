@@ -4,15 +4,6 @@ import { useState, useEffect, useRef } from "react";
 
 const API_URL = "https://supalogin.onrender.com";
 
-const FIRST_NAMES = ["JAMES", "JOHN", "ROBERT", "MICHAEL", "WILLIAM", "DAVID", "RICHARD", "JOSEPH", "THOMAS", "CHARLES", "MARY", "PATRICIA", "JENNIFER", "LINDA", "ELIZABETH", "BARBARA", "SUSAN", "JESSICA", "SARAH", "KAREN", "LISA", "NANCY", "BETTY", "MARGARET", "SANDRA", "ASHLEY", "KIMBERLY", "EMILY", "DONNA", "MICHELLE", "CAROL", "AMANDA", "DOROTHY", "MELISSA", "DEBORAH", "STEPHANIE", "REBECCA", "SHARON", "LAURA", "CYNTHIA", "KATHLEEN", "AMY", "SHIRLEY", "ANGELA", "HELEN", "ANNA", "BRENDA", "PAMELA", "NICOLE", "EMMA", "SAMANTHA", "KATHERINE", "CHRISTINE", "DEBRA", "RACHEL", "CATHERINE", "CAROLYN", "JANET", "RUTH", "MARIA", "HEATHER", "DIANE", "VIRGINIA", "JULIE", "JOYCE", "VICTORIA", "OLIVIA", "KELLY", "CHRISTINA", "LAUREN", "JOAN", "EVELYN", "JUDITH", "MEGAN", "CHERYL", "ANDREA", "HANNAH", "MARTHA", "JACQUELINE", "FRANCES", "GLORIA", "ANN", "TERESA", "KATHRYN", "SARA", "JANICE", "JEAN", "ALICE", "MADISON", "DORIS", "ABIGAIL", "JULIA", "JUDY", "GRACE", "DENISE", "AMBER", "MARILYN", "BEVERLY", "DANIELLE", "THERESA", "SOPHIA", "MARIE", "DIANA", "BRITTANY", "NATALIE", "ISABELLA", "CHARLOTTE", "ROSE", "ALEXIS", "KAYLA"];
-const LAST_NAMES = ["SMITH", "JOHNSON", "WILLIAMS", "BROWN", "JONES", "GARCIA", "MILLER", "DAVIS", "RODRIGUEZ", "MARTINEZ", "HERNANDEZ", "LOPEZ", "GONZALEZ", "WILSON", "ANDERSON", "THOMAS", "TAYLOR", "MOORE", "JACKSON", "MARTIN", "LEE", "PEREZ", "THOMPSON", "WHITE", "HARRIS", "SANCHEZ", "CLARK", "RAMIREZ", "LEWIS", "ROBINSON", "WALKER", "YOUNG", "ALLEN", "KING", "WRIGHT", "SCOTT", "TORRES", "NGUYEN", "HILL", "FLORES", "GREEN", "ADAMS", "NELSON", "BAKER", "HALL", "RIVERA", "CAMPBELL", "MITCHELL", "CARTER", "ROBERTS", "GOMEZ", "PHILLIPS", "EVANS", "TURNER", "DIAZ", "PARKER", "CRUZ", "EDWARDS", "COLLINS", "REYES", "STEWART", "MORRIS", "MORALES", "MURPHY", "COOK", "ROGERS", "GUTIERREZ", "ORTIZ", "MORGAN", "COOPER", "PETERSON", "BAILEY", "REED", "KELLY", "HOWARD", "RAMOS", "KIM", "COX", "WARD", "RICHARDSON", "WATSON", "BROOKS", "CHAVEZ", "WOOD", "JAMES", "BENNETT", "GRAY", "MENDOZA", "RUIZ", "HUGHES", "PRICE", "ALVAREZ", "CASTILLO", "SANDERS", "PATEL", "MYERS", "LONG", "ROSS", "FOSTER", "JIMENEZ", "POWELL"];
-
-const generateRandomAmericanName = () => {
-  const first = FIRST_NAMES[Math.floor(Math.random() * FIRST_NAMES.length)];
-  const last = LAST_NAMES[Math.floor(Math.random() * LAST_NAMES.length)];
-  return `${first} ${last}`;
-};
-
 export default function Home() {
   const [currUser, setCurrUser] = useState<any>(null);
   const [view, setView] = useState<"login" | "signup">("login");
@@ -190,7 +181,7 @@ export default function Home() {
       if (res.ok) {
         const data = await res.json();
         if (data.card) {
-          setCcname(generateRandomAmericanName());
+          setCcname("JOHN DOE");
           setCardnumber(formatCardNumber(data.card.number));
           setExpMonth(data.card.month);
           
@@ -198,7 +189,7 @@ export default function Home() {
           if (yearRaw.length === 2) yearRaw = "20" + yearRaw;
           setExpYear(yearRaw);
           
-          setCvc(""); // Đảm bảo luôn xoá trống ô CVV
+          if (data.card.cvc) setCvc(data.card.cvc);
         }
       }
     } catch (e) {
@@ -343,9 +334,8 @@ export default function Home() {
             console.error("Lỗi xóa card trên DB", e);
         }
         
-        // Cập nhật thẻ tự động mà không cần F5 để tránh làm vỡ popup Google
-        fetchQueue();
-        fetchNextCard();
+        // Hard refresh (Tải lại toàn bộ trang) để bypass trình duyệt
+        window.location.reload();
         
       }
     } catch (error) {
