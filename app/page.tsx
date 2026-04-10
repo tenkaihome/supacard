@@ -113,9 +113,36 @@ export default function Home() {
     }
   };
 
+  const fetchNextCard = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/user/cards/next`, {
+        headers: { Authorization: `Bearer ${currUser.token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.card) {
+          setCcname("JOHN DOE");
+          setCardnumber(formatCardNumber(data.card.number));
+          setExpMonth(data.card.month);
+          
+          let yearRaw = data.card.year;
+          if (yearRaw.length === 2) yearRaw = "20" + yearRaw;
+          setExpYear(yearRaw);
+          
+          if (data.card.cvc) setCvc(data.card.cvc);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch next card", e);
+    }
+  };
+
   useEffect(() => {
     if (currUser && currUser.role === 1 && activeTab === "users") {
       fetchUsers();
+    }
+    if (currUser && activeTab === "card") {
+      fetchNextCard();
     }
   }, [currUser, activeTab]);
 
@@ -172,27 +199,36 @@ export default function Home() {
     return formattedValue;
   };
 
-  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+  const handlePaste = async (e: React.ClipboardEvent<HTMLInputElement>) => {
     const pasteData = e.clipboardData.getData("text");
     if (pasteData.includes("|")) {
       e.preventDefault(); // Ngăn mặc định việc dán toàn bộ chuỗi vào 1 ô
-      const parts = pasteData.split("|");
+      
+      const lines = pasteData.split("\n").map(l => l.trim()).filter(l => l.includes("|"));
+      const cardsObj = lines.map(line => {
+        const parts = line.split("|");
+        return {
+          number: parts[0] ? parts[0].replace(/[^0-9]/g, "") : "",
+          month: parts[1] ? parts[1].replace(/[^0-9]/g, "").substring(0, 2) : "",
+          year: parts[2] ? parts[2].replace(/[^0-9]/g, "") : "",
+          cvc: parts[3] ? parts[3].replace(/[^0-9]/g, "").substring(0, 4) : ""
+        };
+      });
 
-      // Ô số 1: Số thẻ
-      if (parts[0]) setCardnumber(formatCardNumber(parts[0]));
-
-      // Ô số 2: Tháng
-      if (parts[1]) setExpMonth(parts[1].replace(/[^0-9]/g, "").substring(0, 2));
-
-      // Ô số 3: Năm (Tự động thêm 20)
-      if (parts[2]) {
-        const yearRaw = parts[2].replace(/[^0-9]/g, "");
-        if (yearRaw.length === 2) setExpYear("20" + yearRaw);
-        else if (yearRaw.length >= 4) setExpYear(yearRaw.substring(0, 4));
+      try {
+        await fetch(`${API_URL}/api/user/cards`, {
+           method: "POST",
+           headers: {
+             "Content-Type": "application/json",
+             Authorization: `Bearer ${currUser.token}`
+           },
+           body: JSON.stringify({ cards: cardsObj })
+        });
+        // Sau khi push lên server, kéo thẻ đầu tiên về để điền
+        fetchNextCard();
+      } catch (err) {
+        console.error(err);
       }
-
-      // Ô số 4: CVC (nếu mã ném vào có cả cvc thì parse không thì thôi)
-      if (parts[3]) setCvc(parts[3].replace(/[^0-9]/g, "").substring(0, 4));
     }
   };
 
@@ -225,6 +261,20 @@ export default function Home() {
             }
           } catch (err) { }
         }
+        
+        // Xóa thẻ top trong DB sau khi popup Gpay đã xử lý xong
+        try {
+            await fetch(`${API_URL}/api/user/cards/top`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${currUser.token}` }
+            });
+        } catch (e) {
+            console.error("Lỗi xóa card trên DB", e);
+        }
+        
+        // Hard refresh (Tải lại toàn bộ trang) để bypass trình duyệt
+        window.location.reload();
+        
       }
     } catch (error) {
       alert("An error occurred during processing. Please try again.");
