@@ -141,6 +141,24 @@ export default function Home() {
     }
   };
 
+  const clearQueue = async () => {
+    if (!window.confirm("Are you sure you want to clear all cards from the queue?")) return;
+    try {
+      await fetch(`${API_URL}/api/user/cards`, {
+         method: "DELETE",
+         headers: { Authorization: `Bearer ${currUser.token}` }
+      });
+      fetchQueue();
+      setCcname("");
+      setCardnumber("");
+      setExpMonth("");
+      setExpYear("20");
+      setCvc("");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleBulkSubmit = async () => {
     if (!queueText.trim()) return;
     const lines = queueText.split("\n").map(l => l.trim()).filter(l => l.includes("|"));
@@ -632,7 +650,14 @@ export default function Home() {
           <div className="bg-white w-full max-w-[380px] rounded-[24px] shadow-[0_20px_40px_rgba(123,44,191,0.06)] p-8 animate-in fade-in zoom-in-95 duration-200 shrink-0 flex flex-col">
             <div className="flex justify-between items-center mb-5">
               <h2 className="text-gray-900 text-[18px] font-bold">Card Queue</h2>
-              <span className="bg-purple-100 text-[#7b2cbf] font-extrabold text-[12px] px-2.5 py-1 rounded-lg">{cardQueue.length} items</span>
+              <div className="flex items-center gap-2">
+                {cardQueue.length > 0 && (
+                  <button onClick={clearQueue} className="bg-red-50 text-red-600 hover:bg-red-100 font-bold text-[11px] px-2 py-1 rounded-lg transition-colors">
+                    Clear All
+                  </button>
+                )}
+                <span className="bg-purple-100 text-[#7b2cbf] font-extrabold text-[12px] px-2.5 py-1 rounded-lg">{cardQueue.length} items</span>
+              </div>
             </div>
 
             <textarea
