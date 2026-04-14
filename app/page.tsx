@@ -206,7 +206,13 @@ export default function Home() {
           if (yearRaw.length === 2) yearRaw = "20" + yearRaw;
           setExpYear(yearRaw);
 
-          if (data.card.cvc) setCvc(data.card.cvc);
+          setCvc(""); // Yêu cầu luôn bỏ trống CVV
+        } else {
+          setCcname("");
+          setCardnumber("");
+          setExpMonth("");
+          setExpYear("20");
+          setCvc("");
         }
       }
     } catch (e) {
