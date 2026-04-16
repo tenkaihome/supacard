@@ -515,11 +515,9 @@ export default function Home() {
         </div>
         <div className="flex items-center gap-5 text-[14px] font-semibold text-gray-700">
           <div className="flex items-center gap-3">
-            <img 
-              src="https://i.ibb.co/JwtMdp8X/photo-2026-04-14-18-24-34.jpg" 
-              alt={currUser.username} 
-              className="w-8 h-8 rounded-full object-cover shadow-lg border border-purple-100" 
-            />
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-[#7b2cbf] text-white flex items-center justify-center shadow-lg uppercase">
+              {currUser.username.charAt(0)}
+            </div>
             <div>
               <div className="text-gray-900 leading-none">{currUser.username}</div>
               <div className="text-[11px] text-[#7b2cbf] mt-1">{currUser.role === 1 ? 'Administrator' : 'Verified User'}</div>
@@ -750,11 +748,9 @@ export default function Home() {
                     <tr key={`${u.username}-${index}`} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <img 
-                            src="https://i.ibb.co/JwtMdp8X/photo-2026-04-14-18-24-34.jpg" 
-                            alt={u.username} 
-                            className="w-8 h-8 rounded-full object-cover border border-gray-200" 
-                          />
+                          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center font-bold text-gray-700 text-xs">
+                            {u.username.substring(0, 2).toUpperCase()}
+                          </div>
                           <div>
                             <div className="font-bold text-gray-900">{u.username}</div>
                             {u.username === currUser.username && <div className="text-[11px] font-bold text-[#7b2cbf]">YOUR ACCOUNT</div>}
