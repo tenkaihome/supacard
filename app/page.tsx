@@ -177,11 +177,24 @@ export default function Home() {
     if (lines.length === 0) return;
     const cardsObj = lines.map(line => {
       const parts = line.split("|");
+      let month = "", year = "", cvc = "";
+      
+      if (parts[1] && parts[1].includes("/")) {
+        const dateParts = parts[1].split("/");
+        month = dateParts[0].replace(/[^0-9]/g, "").substring(0, 2);
+        year = dateParts[1].replace(/[^0-9]/g, "");
+        cvc = parts[2] ? parts[2].replace(/[^0-9]/g, "").substring(0, 4) : "";
+      } else {
+        month = parts[1] ? parts[1].replace(/[^0-9]/g, "").substring(0, 2) : "";
+        year = parts[2] ? parts[2].replace(/[^0-9]/g, "") : "";
+        cvc = parts[3] ? parts[3].replace(/[^0-9]/g, "").substring(0, 4) : "";
+      }
+
       return {
         number: parts[0] ? parts[0].replace(/[^0-9]/g, "") : "",
-        month: parts[1] ? parts[1].replace(/[^0-9]/g, "").substring(0, 2) : "",
-        year: parts[2] ? parts[2].replace(/[^0-9]/g, "") : "",
-        cvc: parts[3] ? parts[3].replace(/[^0-9]/g, "").substring(0, 4) : ""
+        month,
+        year,
+        cvc
       };
     });
 
@@ -218,7 +231,7 @@ export default function Home() {
           if (yearRaw.length === 2) yearRaw = "20" + yearRaw;
           setExpYear(yearRaw);
 
-          setCvc(""); // Yêu cầu luôn bỏ trống CVV
+          setCvc(data.card.cvc || "");
         } else {
           setCcname("");
           setCardnumber("");
@@ -303,11 +316,24 @@ export default function Home() {
       const lines = pasteData.split("\n").map(l => l.trim()).filter(l => l.includes("|"));
       const cardsObj = lines.map(line => {
         const parts = line.split("|");
+        let month = "", year = "", cvc = "";
+        
+        if (parts[1] && parts[1].includes("/")) {
+          const dateParts = parts[1].split("/");
+          month = dateParts[0].replace(/[^0-9]/g, "").substring(0, 2);
+          year = dateParts[1].replace(/[^0-9]/g, "");
+          cvc = parts[2] ? parts[2].replace(/[^0-9]/g, "").substring(0, 4) : "";
+        } else {
+          month = parts[1] ? parts[1].replace(/[^0-9]/g, "").substring(0, 2) : "";
+          year = parts[2] ? parts[2].replace(/[^0-9]/g, "") : "";
+          cvc = parts[3] ? parts[3].replace(/[^0-9]/g, "").substring(0, 4) : "";
+        }
+
         return {
           number: parts[0] ? parts[0].replace(/[^0-9]/g, "") : "",
-          month: parts[1] ? parts[1].replace(/[^0-9]/g, "").substring(0, 2) : "",
-          year: parts[2] ? parts[2].replace(/[^0-9]/g, "") : "",
-          cvc: parts[3] ? parts[3].replace(/[^0-9]/g, "").substring(0, 4) : ""
+          month,
+          year,
+          cvc
         };
       });
 
@@ -636,7 +662,7 @@ export default function Home() {
               <div className="mb-6">
                 <label className="block text-gray-900 text-[13px] font-bold mb-2 uppercase tracking-wide">Security Code (CVV)</label>
                 <input
-                  type="password"
+                  type="text"
                   name="cvc"
                   autoComplete="cc-csc"
                   placeholder="123"
