@@ -30,6 +30,23 @@ export default function Home() {
   const [showSuccess, setShowSuccess] = useState(false);
   const yearInputRef = useRef<HTMLInputElement>(null);
 
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState<"avatar" | "username" | "password" | null>(null);
+  const [profileInput, setProfileInput] = useState("");
+  const [profileOldPassword, setProfileOldPassword] = useState("");
+  const [profileLoading, setProfileLoading] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   useEffect(() => {
     const stored = sessionStorage.getItem("user");
     if (stored) {
@@ -109,6 +126,56 @@ export default function Home() {
     sessionStorage.removeItem("user");
     setCurrUser(null);
     setActiveTab("card");
+  };
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profileInput.trim()) return;
+    
+    setProfileLoading(true);
+    try {
+      const payload: any = {};
+      if (showProfileModal === "avatar") payload.newAvatar = profileInput;
+      if (showProfileModal === "username") payload.newUsername = profileInput;
+      if (showProfileModal === "password") {
+        if (!profileOldPassword.trim()) {
+           alert("Please enter your old password.");
+           setProfileLoading(false);
+           return;
+        }
+        payload.oldPassword = profileOldPassword;
+        payload.newPassword = profileInput;
+      }
+
+      const res = await fetch(`${API_URL}/api/user/profile`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${currUser.token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Update failed");
+      } else {
+        const updatedUser = { 
+          ...currUser, 
+          ...data.user, 
+          token: data.token || currUser.token 
+        };
+        setCurrUser(updatedUser);
+        sessionStorage.setItem("user", JSON.stringify(updatedUser));
+        setShowProfileModal(null);
+        setProfileInput("");
+        setProfileOldPassword("");
+        alert("Update successful!");
+      }
+    } catch (error) {
+      alert("Network error");
+    }
+    setProfileLoading(false);
   };
 
   const fetchUsers = async () => {
@@ -540,16 +607,41 @@ export default function Home() {
           </div>
         </div>
         <div className="flex items-center gap-5 text-[14px] font-semibold text-gray-700">
-          <div className="flex items-center gap-3">
-            <img 
-              src="https://i.ibb.co/JwtMdp8X/photo-2026-04-14-18-24-34.jpg" 
-              alt={currUser.username} 
-              className="w-8 h-8 rounded-full object-cover shadow-lg border border-purple-100" 
-            />
-            <div>
-              <div className="text-gray-900 leading-none">{currUser.username}</div>
-              <div className="text-[11px] text-[#7b2cbf] mt-1">{currUser.role === 1 ? 'Administrator' : 'Verified User'}</div>
+          <div className="relative" ref={profileMenuRef}>
+            <div className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded-xl transition-colors" onClick={() => setShowProfileMenu(!showProfileMenu)}>
+              <img 
+                src={currUser.avatar || "https://i.ibb.co/JwtMdp8X/photo-2026-04-14-18-24-34.jpg"} 
+                alt={currUser.username} 
+                className="w-8 h-8 rounded-full object-cover shadow-lg border border-purple-100" 
+              />
+              <div>
+                <div className="text-gray-900 leading-none font-bold">{currUser.username}</div>
+                <div className="text-[11px] text-[#7b2cbf] mt-1">{currUser.role === 1 ? 'Administrator' : 'Verified User'}</div>
+              </div>
             </div>
+            
+            {showProfileMenu && (
+              <div className="absolute top-full right-0 mt-2 w-48 bg-white border border-gray-100 rounded-2xl shadow-[0_10px_25px_rgba(0,0,0,0.05)] py-2 z-50">
+                <button 
+                  onClick={() => { setShowProfileModal("avatar"); setShowProfileMenu(false); setProfileInput(currUser.avatar || ""); }}
+                  className="w-full text-left px-5 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-[#7b2cbf] transition-colors font-medium"
+                >
+                  Change Avatar
+                </button>
+                <button 
+                  onClick={() => { setShowProfileModal("username"); setShowProfileMenu(false); setProfileInput(currUser.username); }}
+                  className="w-full text-left px-5 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-[#7b2cbf] transition-colors font-medium"
+                >
+                  Change Username
+                </button>
+                <button 
+                  onClick={() => { setShowProfileModal("password"); setShowProfileMenu(false); setProfileInput(""); setProfileOldPassword(""); }}
+                  className="w-full text-left px-5 py-2.5 text-sm text-gray-700 hover:bg-purple-50 hover:text-[#7b2cbf] transition-colors font-medium"
+                >
+                  Change Password
+                </button>
+              </div>
+            )}
           </div>
           <div className="h-8 w-px bg-gray-200 mx-2"></div>
           <button onClick={handleLogout} className="text-gray-400 hover:text-red-500 transition-colors font-bold flex items-center gap-1.5">
@@ -777,7 +869,7 @@ export default function Home() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <img 
-                            src="https://i.ibb.co/JwtMdp8X/photo-2026-04-14-18-24-34.jpg" 
+                            src={u.avatar || "https://i.ibb.co/JwtMdp8X/photo-2026-04-14-18-24-34.jpg"} 
                             alt={u.username} 
                             className="w-8 h-8 rounded-full object-cover border border-gray-200" 
                           />
@@ -829,6 +921,60 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      {showProfileModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white max-w-sm w-full rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-200">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              {showProfileModal === "avatar" && "Change Avatar URL"}
+              {showProfileModal === "username" && "Change Username"}
+              {showProfileModal === "password" && "Change Password"}
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">
+              {showProfileModal === "avatar" && "Enter a valid image URL to update your profile picture."}
+              {showProfileModal === "username" && "Enter your new username. It must be unique."}
+              {showProfileModal === "password" && "Enter your new password."}
+            </p>
+            
+            <form onSubmit={handleUpdateProfile}>
+              {showProfileModal === "password" && (
+                <input
+                  type="password"
+                  value={profileOldPassword}
+                  onChange={(e) => setProfileOldPassword(e.target.value)}
+                  placeholder="Old Password"
+                  required
+                  className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-500 focus:bg-white focus:ring-4 focus:ring-purple-500/10 transition-all text-gray-900 mb-4"
+                />
+              )}
+              <input
+                type={showProfileModal === "password" ? "password" : "text"}
+                value={profileInput}
+                onChange={(e) => setProfileInput(e.target.value)}
+                placeholder={showProfileModal === "avatar" ? "https://..." : showProfileModal === "username" ? "New Username" : "New Password"}
+                required
+                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-500 focus:bg-white focus:ring-4 focus:ring-purple-500/10 transition-all text-gray-900 mb-6"
+              />
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setShowProfileModal(null); setProfileOldPassword(""); }}
+                  className="flex-1 p-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={profileLoading}
+                  className="flex-1 p-3.5 bg-[#7b2cbf] hover:bg-[#6c26a6] text-white rounded-xl font-bold transition-all active:scale-95 disabled:opacity-70"
+                >
+                  {profileLoading ? "Saving..." : "Save"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <footer className="w-full text-center text-[13px] text-gray-400 font-medium py-8 mt-auto">
         &copy; Copyright by Liam - owned by Telegram: @caramencafe
