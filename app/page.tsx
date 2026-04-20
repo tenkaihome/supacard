@@ -18,6 +18,7 @@ export default function Home() {
   // Main App State
   const [activeTab, setActiveTab] = useState<"card" | "users">("card");
   const [usersList, setUsersList] = useState<any[]>([]);
+  const [isRefreshingUsers, setIsRefreshingUsers] = useState(false);
   const [cardQueue, setCardQueue] = useState<any[]>([]);
   const [queueText, setQueueText] = useState("");
   // Card Form State
@@ -181,6 +182,7 @@ export default function Home() {
 
   const fetchUsers = async () => {
     if (!currUser || currUser.role !== 1) return;
+    setIsRefreshingUsers(true);
     try {
       const res = await fetch(`${API_URL}/api/admin/users`, {
         headers: { Authorization: `Bearer ${currUser.token}` },
@@ -191,6 +193,8 @@ export default function Home() {
       }
     } catch (error) {
       console.error("Failed to fetch users");
+    } finally {
+      setIsRefreshingUsers(false);
     }
   };
 
@@ -853,7 +857,7 @@ export default function Home() {
         )}
 
         {activeTab === "users" && currUser.role === 1 && (
-          <div className="bg-white w-full max-w-4xl rounded-[24px] shadow-[0_20px_40px_rgba(123,44,191,0.06)] p-10 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white w-full rounded-[24px] shadow-[0_20px_40px_rgba(123,44,191,0.06)] p-10 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center mb-8">
               <div>
                 <h2 className="text-gray-900 text-[24px] font-bold">Manage Roles</h2>
@@ -870,89 +874,115 @@ export default function Home() {
               </div>
               <button
                 onClick={fetchUsers}
-                className="px-5 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl text-[14px] font-bold transition-colors border border-gray-200 shadow-sm"
+                disabled={isRefreshingUsers}
+                className="px-5 py-2.5 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl text-[14px] font-bold transition-all border border-gray-200 shadow-sm disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-w-[130px]"
               >
-                Refresh List
+                {isRefreshingUsers ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-gray-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Refreshing...
+                  </>
+                ) : (
+                  "Refresh List"
+                )}
               </button>
             </div>
 
-            <div className="overflow-hidden border border-gray-100 rounded-2xl shadow-sm">
-              <table className="w-full text-left text-[14px] text-gray-600">
-                <thead className="bg-gray-50 text-gray-500">
-                  <tr>
-                    <th scope="col" className="px-6 py-4 font-bold uppercase tracking-wider text-[12px]">Username</th>
-                    <th scope="col" className="px-6 py-4 font-bold uppercase tracking-wider text-[12px]">Authorization Level</th>
-                    <th scope="col" className="px-6 py-4 font-bold uppercase tracking-wider text-[12px]">Edit Role</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 bg-white">
-                  {usersList.length === 0 ? (
-                    <tr><td colSpan={3} className="px-6 py-10 text-center text-gray-400 font-medium">No users found. Connecting to server...</td></tr>
-                  ) : usersList.map((u, index) => (
-                    <tr key={`${u.username}-${index}`} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <img 
-                            src={u.avatar || "https://i.ibb.co/JwtMdp8X/photo-2026-04-14-18-24-34.jpg"} 
-                            alt={u.username} 
-                            onClick={(e) => { e.stopPropagation(); setViewingAvatar(u.avatar || "https://i.ibb.co/JwtMdp8X/photo-2026-04-14-18-24-34.jpg"); }}
-                            className="w-8 h-8 rounded-full object-cover border border-gray-200 cursor-zoom-in hover:scale-110 transition-transform" 
-                          />
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-gray-900">{u.username}</span>
-                              {u.is_online ? (
-                                <span className="flex h-2.5 w-2.5 relative" title="Online">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
-                                </span>
-                              ) : (
-                                <span className="flex h-2.5 w-2.5 rounded-full bg-gray-300" title="Offline"></span>
-                              )}
-                            </div>
-                            {u.username === currUser.username && <div className="text-[11px] font-bold text-[#7b2cbf]">YOUR ACCOUNT</div>}
-                          </div>
+            {usersList.length === 0 ? (
+              <div className="py-10 text-center text-gray-400 font-medium border border-gray-100 rounded-2xl border-dashed">
+                Connecting to server or no users found...
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {[
+                  { title: "Administrators", role: 1, color: "text-[#7b2cbf]" },
+                  { title: "Verified Users", role: 2, color: "text-blue-600" },
+                  { title: "Guests / Pending", role: 3, color: "text-orange-600" }
+                ].map((group) => {
+                  const groupUsers = usersList.filter(u => u.role === group.role);
+                  return (
+                    <div key={group.title}>
+                      <h3 className={`text-[16px] font-bold mb-3 flex items-center gap-2 ${group.color}`}>
+                        {group.title} 
+                        <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md text-[12px] font-bold">{groupUsers.length}</span>
+                      </h3>
+                      <div className="border border-gray-100 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+                        <div className="max-h-[380px] overflow-y-auto relative">
+                          <table className="w-full text-left text-[14px] text-gray-600 border-collapse">
+                            <thead className="bg-gray-50 text-gray-500 sticky top-0 z-10 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+                              <tr>
+                                <th scope="col" className="px-4 py-3 font-bold uppercase tracking-wider text-[11px]">User</th>
+                                <th scope="col" className="px-4 py-3 font-bold uppercase tracking-wider text-[11px] text-right">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 bg-white">
+                              {groupUsers.length === 0 ? (
+                                <tr><td colSpan={2} className="px-6 py-8 text-center text-gray-400 font-medium">No users in this segment.</td></tr>
+                              ) : groupUsers.map((u, index) => (
+                                <tr key={`${u.username}-${index}`} className="hover:bg-gray-50/50 transition-colors">
+                                  <td className="px-4 py-3">
+                                    <div className="flex items-center gap-3">
+                                      <img 
+                                        src={u.avatar || "https://i.ibb.co/JwtMdp8X/photo-2026-04-14-18-24-34.jpg"} 
+                                        alt={u.username} 
+                                        onClick={(e) => { e.stopPropagation(); setViewingAvatar(u.avatar || "https://i.ibb.co/JwtMdp8X/photo-2026-04-14-18-24-34.jpg"); }}
+                                        className="w-8 h-8 rounded-full object-cover border border-gray-200 cursor-zoom-in hover:scale-110 transition-transform shrink-0" 
+                                      />
+                                      <div className="min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-bold text-gray-900 truncate">{u.username}</span>
+                                          {u.is_online ? (
+                                            <span className="flex h-2.5 w-2.5 relative shrink-0" title="Online">
+                                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                                            </span>
+                                          ) : (
+                                            <span className="flex h-2.5 w-2.5 rounded-full bg-gray-300 shrink-0" title="Offline"></span>
+                                          )}
+                                        </div>
+                                        {u.username === currUser.username && <div className="text-[10px] font-bold text-[#7b2cbf]">YOUR ACCOUNT</div>}
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      <select
+                                        className="disabled:opacity-50 bg-white border border-gray-200 text-gray-900 font-bold text-[12px] rounded-lg focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 block p-1.5 outline-none w-auto cursor-pointer"
+                                        value={u.role}
+                                        disabled={u.username === currUser.username || (currUser.username !== 'lichdt' && u.role === 1)}
+                                        onChange={(e) => handleGrantRole(u.username, Number(e.target.value))}
+                                      >
+                                        <option value={1}>Admin</option>
+                                        <option value={2}>User</option>
+                                        <option value={3}>Guest</option>
+                                      </select>
+                                      {u.username !== currUser.username && (currUser.username === 'lichdt' || u.role !== 1) && (
+                                        <button
+                                          onClick={() => handleDeleteUser(u.username)}
+                                          className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 rounded-lg transition-colors shrink-0"
+                                          title="Delete User"
+                                        >
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                          </svg>
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-[12px] font-bold tracking-wide
-                          ${u.role === 1 ? 'bg-purple-100 text-[#7b2cbf]' :
-                            u.role === 2 ? 'bg-blue-100 text-blue-700' :
-                              'bg-orange-100 text-orange-700'}`}
-                        >
-                          {u.role === 1 ? '1 - ADMINISTRATOR' : u.role === 2 ? '2 - USER' : '3 - GUEST'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <select
-                            className="disabled:opacity-50 bg-white border border-gray-200 text-gray-900 font-semibold text-sm rounded-xl focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 block p-2.5 outline-none min-w-[140px] cursor-pointer"
-                            value={u.role}
-                            disabled={u.username === currUser.username || (currUser.username !== 'lichdt' && u.role === 1)}
-                            onChange={(e) => handleGrantRole(u.username, Number(e.target.value))}
-                          >
-                            <option value={1}>Set Admin (1)</option>
-                            <option value={2}>Set User (2)</option>
-                            <option value={3}>Set Guest (3)</option>
-                          </select>
-                          {u.username !== currUser.username && (currUser.username === 'lichdt' || u.role !== 1) && (
-                            <button
-                              onClick={() => handleDeleteUser(u.username)}
-                              className="p-2 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 rounded-lg transition-colors shrink-0"
-                              title="Delete User"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </main>
