@@ -35,6 +35,7 @@ export default function Home() {
   const [profileInput, setProfileInput] = useState("");
   const [profileOldPassword, setProfileOldPassword] = useState("");
   const [profileLoading, setProfileLoading] = useState(false);
+  const [viewingAvatar, setViewingAvatar] = useState<string | null>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -625,7 +626,8 @@ export default function Home() {
               <img 
                 src={currUser.avatar || "https://i.ibb.co/JwtMdp8X/photo-2026-04-14-18-24-34.jpg"} 
                 alt={currUser.username} 
-                className="w-8 h-8 rounded-full object-cover shadow-lg border border-purple-100" 
+                onClick={(e) => { e.stopPropagation(); setViewingAvatar(currUser.avatar || "https://i.ibb.co/JwtMdp8X/photo-2026-04-14-18-24-34.jpg"); }}
+                className="w-8 h-8 rounded-full object-cover shadow-sm border border-purple-100 hover:scale-110 transition-transform" 
               />
               <div>
                 <div className="text-gray-900 leading-none font-bold">{currUser.username}</div>
@@ -893,7 +895,8 @@ export default function Home() {
                           <img 
                             src={u.avatar || "https://i.ibb.co/JwtMdp8X/photo-2026-04-14-18-24-34.jpg"} 
                             alt={u.username} 
-                            className="w-8 h-8 rounded-full object-cover border border-gray-200" 
+                            onClick={(e) => { e.stopPropagation(); setViewingAvatar(u.avatar || "https://i.ibb.co/JwtMdp8X/photo-2026-04-14-18-24-34.jpg"); }}
+                            className="w-8 h-8 rounded-full object-cover border border-gray-200 cursor-zoom-in hover:scale-110 transition-transform" 
                           />
                           <div>
                             <div className="flex items-center gap-2">
@@ -953,6 +956,30 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      {viewingAvatar && (
+        <div 
+          className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setViewingAvatar(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] w-full flex justify-center items-center">
+            <button 
+              onClick={() => setViewingAvatar(null)}
+              className="absolute -top-12 right-0 text-white hover:text-gray-300 w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <img 
+              src={viewingAvatar} 
+              alt="Enlarged Avatar" 
+              className="max-w-full max-h-[85vh] rounded-2xl shadow-2xl object-scale-down animate-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()} 
+            />
+          </div>
+        </div>
+      )}
 
       {showProfileModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
