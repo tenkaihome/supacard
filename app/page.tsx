@@ -902,7 +902,13 @@ export default function Home() {
                   { title: "Verified Users", role: 2, color: "text-blue-600" },
                   { title: "Guests / Pending", role: 3, color: "text-orange-600" }
                 ].map((group) => {
-                  const groupUsers = usersList.filter(u => u.role === group.role);
+                  const groupUsers = usersList
+                    .filter(u => u.role === group.role)
+                    .sort((a, b) => {
+                      if (a.is_online && !b.is_online) return -1;
+                      if (!a.is_online && b.is_online) return 1;
+                      return a.username.localeCompare(b.username);
+                    });
                   return (
                     <div key={group.title}>
                       <h3 className={`text-[16px] font-bold mb-3 flex items-center gap-2 ${group.color}`}>
